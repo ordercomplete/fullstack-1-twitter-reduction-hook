@@ -1,78 +1,145 @@
-import { useState, useEffect } from "react";
+import { useReducer } from "react";
 
 import Page from "./component/page";
-import PostList from "./container/post-list";
 import Grid from "./component/grid";
 import Box from "./component/box";
+// import PostList from "./container/post-list";
 
-// function App() {
-// example 1 =====================
-// const [isHidden, setHidden] = useState(null);
-// useEffect(() => {
-//   setTimeout(() => setHidden(true), 5000);
-// }, []);
-// return <Page>{isHidden !== true && <PostList />}</Page>;
-// example 2 =====================
-// const [count, setCount] = useState(0);
-// useEffect(() => {
-//   setCount(count + 1);
-// });
-// original
-// return (
-//   <Page>
-//     <PostList />
-//   </Page>
-// );
-// }
+const LIST_ACTION_TYPE = {
+  ADD: "add",
+  DELETE: "delete",
+  SELECT: "select",
+  REVERSE: "reverse",
+};
 
-// example 4 =====================
+function listReducer(state, action) {
+  switch (action.type) {
+    case LIST_ACTION_TYPE.ADD:
+      const id = new Date().getTime();
+      const newItem = { value: action.payload, id };
+      return {
+        ...state,
+        items: [...state.items, newItem],
+      };
+
+    case LIST_ACTION_TYPE.DELETE:
+      const newItems = state.items.filter((item) => item.id !== action.payload);
+
+      return {
+        ...state,
+        items: newItems,
+      };
+
+    case LIST_ACTION_TYPE.SELECT:
+      return {
+        ...state,
+        selectedId: action.payload === state.selectedId ? null : action.payload,
+      };
+
+    case LIST_ACTION_TYPE.REVERSE:
+      return {
+        ...state,
+        items: state.items.reverse(),
+      };
+    default:
+      return { ...state };
+  }
+}
+const initState = { items: [] };
+
 function App() {
-  const [location, setLocation] = useState(null);
-
-  useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setLocation({ latitude, longitude });
-        },
-        (error) => {
-          console.error("Помилка отримання геолокації:", error.message);
-        }
-      );
+  const init = (state) => {
+    if (state.items && state.items.length === 0) {
+      return {
+        ...state,
+        items: [...state.items, { id: 432312, value: "first item" }],
+      };
     } else {
-      console.еггог("Геолокація не підтримується в цьому браузері.");
+      return state;
     }
-  }, []);
+  };
+
+  console.log("render");
+
+  const [state, dispatch] = useReducer(listReducer, initState, init);
+
+  const handleAddItem = (e) => {
+    const { value } = e.target;
+
+    if (value.trim() === "") return null;
+
+    dispatch({ type: LIST_ACTION_TYPE.ADD, payload: value });
+
+    e.target.value = "";
+  };
+
+  const handleRemoveItem = (id) =>
+    dispatch({
+      type: LIST_ACTION_TYPE.DELETE,
+      payload: id,
+    });
+
+  const handleSelectItem = (id) =>
+    dispatch({
+      type: LIST_ACTION_TYPE.SELECT,
+      payload: id,
+    });
+
+  const handleReverseItem = (id) =>
+    dispatch({
+      type: LIST_ACTION_TYPE.REVERSE,
+      payload: id,
+    });
 
   return (
     <Page>
       <Grid>
         <Box>
-          {location ? (
-            <div>
-              <h2>Baшa геолокація:</h2>
-              <p>Широта: {location.latitude}</p>
-              <p>Довгота: {location.longitude}</p>
-            </div>
-          ) : (
-            <p>Отримання геолокації...</p>
-          )}
+          <Grid>
+            <h1>Список елементів:</h1>
+            <ul>
+              <Grid>
+                {state.items.map(({ value, id }) => (
+                  <li onClick={() => handleSelectItem(id)} key={id}>
+                    <Box
+                      style={{
+                        borderColor:
+                          state.selectedId === id ? "blue" : "#e6e6e6",
+                      }}
+                    >
+                      <Grid>
+                        <span>{value}</span>
+                        <Box>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveItem(id);
+                            }}
+                          >
+                            Видалити
+                          </button>
+                        </Box>
+                      </Grid>
+                    </Box>
+                  </li>
+                ))}
+              </Grid>
+            </ul>
+          </Grid>
         </Box>
-        <PostList />
+        <Box>
+          <input
+            onBlur={handleAddItem}
+            type="text"
+            placeholder="Введіть новий елемент"
+          />
+        </Box>
+        <Box>
+          <button onClick={handleReverseItem}>Змінити порядок</button>
+        </Box>
       </Grid>
     </Page>
   );
 }
-
-// example 3 створено файл useWindowListener та перенесено туди =====================
-// export function useWindowListener(eventType, listener) {
-//   useEffect(() => {
-//     window.addEventListener(eventType, listener);
-//     return () => {
-//       window.removeEventListener(eventType, listener);
-//     };
-//   }, [eventType, listener]);
-// }
 
 export default App;
